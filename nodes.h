@@ -43,7 +43,7 @@ class CompUnit : public Node
     Node* content;
 public:
     CompUnit(Node* cu,Node* c):compUnit1(cu), content(c){}
-    int process(void* ptr);
+    int process(void* ptr) override;
 };
 
 

@@ -12,18 +12,21 @@
 using namespace std;
 
 SymTable *currentSymTable;
-stringstream* gloDeclCode=new stringstream ;
-stringstream* gloStmtCode=new stringstream ;
-stringstream* funcDeclCode=new stringstream ;
-stringstream* funcStmtCode=new stringstream ;
-stringstream* declCode;
-stringstream* stmtCode;
+stringstream *gloDeclCode = new stringstream;
+stringstream *gloStmtCode = new stringstream;
+stringstream *funcDeclCode = new stringstream;
+stringstream *funcStmtCode = new stringstream;
+stringstream *mainDeclCode = new stringstream;
+stringstream *mainStmtCode = new stringstream;
+stringstream *totCode = new stringstream;
+stringstream *declCode;
+stringstream *stmtCode;
 bool calcOnly;
 bool inCond;
 bool flag;//whether have && ||
-bool nonLval= false; //void func call
-bool isLval= false; //left exp
-bool inFunc= false;
+bool nonLval = false; //void func call
+bool isLval = false; //left exp
+bool inFunc = false;
 string lastIdent, tab;
 int labelCnt = 0, trueLabel, falseLabel, whileLabel, breakLabel;
 int Offset = 0;
@@ -56,24 +59,33 @@ void appandNewTemp(string rstr) {
 void start(Node *root) {
     currentSymTable = new SymTable();
     currentSymTable->addSymbol("getint", Symbol::IntFunc, false);
+    currentSymTable->addSymbol("getch", Symbol::IntFunc, false);
+    currentSymTable->addSymbol("getarray", Symbol::IntFunc, false);
     currentSymTable->addSymbol("putint", Symbol::VoidFunc, false);
     currentSymTable->addSymbol("putch", Symbol::VoidFunc, false);
-    stmtCode=gloStmtCode;
-    declCode=gloDeclCode;
+    currentSymTable->addSymbol("putarray", Symbol::VoidFunc, false);
+    stmtCode = gloStmtCode;
+    declCode = gloDeclCode;
     root->process(nullptr);
-    cout << endl << (*declCode).str() << (*stmtCode).str() << endl;
+    cout << gloDeclCode->str()
+         << totCode->str()
+         << mainDeclCode->str()
+         << gloStmtCode->str()
+         << mainStmtCode->str();
 }
 
 int CompUnit::process(void *ptr) {
     if (compUnit1 != nullptr)
         compUnit1->process(nullptr);
     content->process(nullptr);
+    return 0;
 }
 
 int VarDefList::process(void *ptr) {
     if (varDefList1 != nullptr)
         varDefList1->process(nullptr);
     varDef->process(nullptr);
+    return 0;
 }
 
 struct InitvalInfo {
@@ -103,6 +115,7 @@ int VarDef::process(void *ptr) {
         initVal->process(new InitvalInfo(symbol, 0, 0));
 //        printf("fuck\n");
     }
+    return 0;
 }
 
 int ExpList::process(void *ptr) {
@@ -132,6 +145,7 @@ int ExpList::process(void *ptr) {
             exp->process(ptr);
         }
     }
+    return 0;
 }
 
 
@@ -139,8 +153,8 @@ int InitVal::process(void *ptr) {
     InitvalInfo *info = (InitvalInfo *) ptr;
     Symbol *symbol = info->symbol;
     if (symbol->type == Symbol::Int) {
-        if (exp == nullptr || initValList != nullptr)
-            assert(false);
+//        if (exp == nullptr || initValList != nullptr)
+//            assert(false);
         exp->process(nullptr);
         *stmtCode << tab << symbol->id << " = " << lastIdent << endl;
 //        printf("%s=%d\n",symbol->id.c_str(),res);
@@ -172,6 +186,7 @@ int InitValList::process(void *ptr) {
     if (initValList1 != nullptr)
         initValList1->process(ptr);
     initVal->process(ptr);
+    return 0;
 }
 
 int Exp::process(void *ptr) {
@@ -194,8 +209,8 @@ int Exp::process(void *ptr) {
             else if (op == "*") return res1 * res2;
             else if (op == "/") return res1 / res2;
             else if (op == "%") return res1 % res2;
-            else
-                assert(false);
+//            else
+//                assert(false);
         }
     } else if (inCond && (!op.empty() && (op == "&&" || op == "||"))) {
         int t = trueLabel, f = falseLabel;
@@ -226,10 +241,11 @@ int Exp::process(void *ptr) {
             exp2->process(ptr);
             string str2 = lastIdent;
 //            cout << op << endl;
-            appandNewTemp(str1 + " "+op+" " + str2);
+            appandNewTemp(str1 + " " + op + " " + str2);
             return 0;
         }
     }
+    return 0;
 }
 
 int UnaryExp::process(void *ptr) {
@@ -240,10 +256,10 @@ int UnaryExp::process(void *ptr) {
             else if (unaryOp == "+") return res;
             else if (unaryOp == "-") return -res;
             else if (unaryOp == "!") return !res;
-            else
-                assert(false);
+//            else
+//                assert(false);
         } else {
-            assert(false);
+//            assert(false);
         }
     } else {
         if (ident.empty()) {
@@ -259,21 +275,23 @@ int UnaryExp::process(void *ptr) {
             else if (unaryOp == "-" || unaryOp == "!") {
                 appandNewTemp(unaryOp + lastIdent);
                 return 0;
-            } else
-                assert(false);
+            }
+//            else
+//                assert(false);
         } else {
             if (funcRParams != nullptr) {
                 rparams.clear();
                 funcRParams->process(ptr);
-                for(string p:rparams)
+                for (string p:rparams)
                     *stmtCode << tab << "param " << p << endl;
             }
-            if(nonLval)
-                *stmtCode<<tab<<"call f_"<<ident<<endl;
+            if (nonLval)
+                *stmtCode << tab << "call f_" << ident << endl;
             else
-                appandNewTemp("call f_"+ident);
+                appandNewTemp("call f_" + ident);
         }
     }
+    return 0;
 }
 
 int PrimaryExp::process(void *ptr) {
@@ -298,18 +316,19 @@ int Lval::process(void *ptr) {
     if (expList == nullptr)
         lastIdent = iSymbol->id;
     else {
-        bool outer= false;
-        if(isLval) {
+        bool outer = false;
+        if (isLval) {
             outer = true;
-            isLval= false;
+            isLval = false;
         }
         expList->process(iSymbol);
-        appandNewTemp(lastIdent+" * 4");
-        if(outer)
-            lastIdent=iSymbol->id+" [ "+lastIdent+" ] ";
+        appandNewTemp(lastIdent + " * 4");
+        if (outer)
+            lastIdent = iSymbol->id + " [ " + lastIdent + " ] ";
         else
             appandNewTemp(iSymbol->id + " [ " + lastIdent + " ] ");
     }
+    return 0;
 }
 
 int FuncDef::process(void *ptr) {
@@ -317,32 +336,42 @@ int FuncDef::process(void *ptr) {
 
     if (funcFParams != nullptr)
         funcFParams->process(nullptr);
-    *stmtCode << tab << "f_" << ident << " [ " << currentSymTable->paramCnt << " ]\n";
+
+    if (ident == "main") {
+        declCode = mainDeclCode;
+        stmtCode = mainStmtCode;
+    } else {
+        funcDeclCode->str("");
+        funcStmtCode->str("");
+        declCode = funcDeclCode;
+        stmtCode = funcStmtCode;
+    }
+
+    *declCode << tab << "f_" << ident << " [ " << currentSymTable->paramCnt << " ]\n";
 //    printf("f_%s [%d]\n",ident.c_str(),currentSymTable->paramCnt);
     modOffset(1);
-    funcDeclCode->str("");
-    funcStmtCode->str("");
 //    cerr<<(funcDeclCode->str())<<(funcStmtCode->str());
-    declCode=funcDeclCode;
-    stmtCode=funcStmtCode;
-
 
     block->process(nullptr);
     modOffset(-1);
-    *gloStmtCode<<(*funcDeclCode).str()<<(*funcStmtCode).str()<<endl;
-    declCode=gloDeclCode;
-    stmtCode=gloStmtCode;
-
 
     *stmtCode << tab << "end f_" << ident << endl;
 
-    currentSymTable=currentSymTable->faSymTable;
+    if (ident != "main") {
+        *totCode << declCode->str() << stmtCode->str();
+    }
+
+    declCode = gloDeclCode;
+    stmtCode = gloStmtCode;
+    currentSymTable = currentSymTable->faSymTable;
+    return 0;
 }
 
 int FuncFParams::process(void *ptr) {
     if (funcFParams1 != nullptr)
         funcFParams1->process(ptr);
     funcFParam->process(ptr);
+    return 0;
 }
 
 int FuncFParam::process(void *ptr) {
@@ -355,6 +384,7 @@ int FuncFParam::process(void *ptr) {
         if (expList != nullptr)
             expList->process(symbol);
     }
+    return 0;
 }
 
 
@@ -363,12 +393,14 @@ int Block::process(void *ptr) {
     if (blockItemList != nullptr)
         blockItemList->process(nullptr);
 //    modOffset(-1);
+    return 0;
 }
 
 int BlockItemList::process(void *ptr) {
     if (blockItemList1 != nullptr)
         blockItemList1->process(nullptr);
     blockItem->process(nullptr);//decl or stmt
+    return 0;
 }
 
 void condProcess(Node *cond) {
@@ -388,16 +420,16 @@ int Stmt::process(void *ptr) {
     int w = whileLabel;
     int b = breakLabel;
     if (lval != nullptr) {
-        isLval= true;
+        isLval = true;
         lval->process(nullptr);
-        isLval= false;
+        isLval = false;
         string str = lastIdent;
         exp->process(nullptr);
         *stmtCode << tab << str << " = " << lastIdent << endl;
-    } else if (type==Stmt::Neither && exp != nullptr) {
-        nonLval=true;
+    } else if (type == Stmt::Neither && exp != nullptr) {
+        nonLval = true;
         exp->process(nullptr);
-        nonLval= false;
+        nonLval = false;
     } else if (block != nullptr) {
         block->process(nullptr);
     } else if (type == Stmt::If) {
@@ -419,7 +451,7 @@ int Stmt::process(void *ptr) {
         modOffset(1);
         stmt1->process(ptr);
         modOffset(-1);
-        *stmtCode<<tab<<"goto "<<l(endLabel)<<endl;
+        *stmtCode << tab << "goto " << l(endLabel) << endl;
 
         *stmtCode << tab << l(falseLabel) << ":" << endl;
         modOffset(1);
@@ -457,6 +489,7 @@ int Stmt::process(void *ptr) {
     falseLabel = f;
     whileLabel = w;
     breakLabel = b;
+    return 0;
 }
 
 int FuncRParams::process(void *ptr) {
@@ -465,4 +498,5 @@ int FuncRParams::process(void *ptr) {
     exp->process(ptr);
     appandNewTemp(lastIdent);
     rparams.push_back(lastIdent);
+    return 0;
 }
