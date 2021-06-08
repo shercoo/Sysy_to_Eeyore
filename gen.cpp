@@ -51,6 +51,7 @@ void appandNewTemp(string rstr) {
     Symbol *symbol = currentSymTable->addSymbol("", Symbol::Temp, false);
     *declCode << "var " << symbol->id << endl;
     *stmtCode << tab << symbol->id << " = " << rstr << endl;
+//    cerr << tab << symbol->id << " = " << rstr << endl;
     lastIdent = symbol->id;
 //    cout << "var " << symbol->id << endl;
 //    cout << symbol->id << "=" << rstr << endl;
@@ -139,10 +140,12 @@ int ExpList::process(void *ptr) {
             string str1 = lastIdent;
             exp->process(ptr);
             string str2 = lastIdent;
+//            cerr<<arrSymbol->id<<' '<<arrSymbol->currentDim<<' '<<arrSymbol->dimension[arrSymbol->currentDim]<<endl;
             appandNewTemp(str1 + " * " + to_string(arrSymbol->dimension[arrSymbol->currentDim]));
             appandNewTemp(lastIdent + " + " + str2);
         } else {
             exp->process(ptr);
+            arrSymbol->currentDim=0;
         }
     }
     return 0;
