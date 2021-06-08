@@ -335,6 +335,7 @@ int Lval::process(void *ptr) {
 }
 
 int FuncDef::process(void *ptr) {
+    currentSymTable->addSymbol(ident,type==0?Symbol::IntFunc:Symbol::VoidFunc, false);
     currentSymTable = new SymTable();
 
     if (funcFParams != nullptr)
@@ -358,6 +359,8 @@ int FuncDef::process(void *ptr) {
     block->process(nullptr);
     modOffset(-1);
 
+    if(type==1)
+        *stmtCode<<tab<<"return"<<endl;
     *stmtCode << tab << "end f_" << ident << endl;
 
     if (ident != "main") {
