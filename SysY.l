@@ -23,10 +23,8 @@ while {
 return WHILE;}
 break {
 return BREAK;}
-continue {
-return CONTINUE;}
-return {
-return RETURN;}
+continue {return CONTINUE;}
+return { return RETURN;}
 int {
 return INT;}
 void {

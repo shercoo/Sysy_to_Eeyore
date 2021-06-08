@@ -13,7 +13,7 @@ using namespace std;
 
 SymTable *currentSymTable;
 stringstream declCode, stmtCode;
-bool calcOnly, inCond, flag;
+bool calcOnly, inCond, flag,nonLval;
 string lastIdent, tab;
 int labelCnt = 0, trueLabel, falseLabel, whileLabel, breakLabel;
 int Offset = 0;
@@ -251,6 +251,10 @@ int UnaryExp::process(void *ptr) {
         } else {
             if (funcRParams != nullptr)
                 funcRParams->process(ptr);
+            if(nonLval)
+                stmtCode<<tab<<"call f_"<<ident<<endl;
+            else
+                appandNewTemp("call f_"+ident);
         }
     }
 }
@@ -348,8 +352,10 @@ int Stmt::process(void *ptr) {
         string str = lastIdent;
         exp->process(nullptr);
         stmtCode << tab << str << "=" << lastIdent << endl;
-    } else if (exp != nullptr) {
+    } else if (type==Stmt::Neither && exp != nullptr) {
+        nonLval=true;
         exp->process(nullptr);
+        nonLval= false;
     } else if (block != nullptr) {
         block->process(nullptr);
     } else if (type == Stmt::If) {
@@ -397,6 +403,7 @@ int Stmt::process(void *ptr) {
     } else if (type == Stmt::ReturnVoid) {
         stmtCode << tab << "return" << endl;
     } else if (type == Stmt::ReturnVal) {
+//        printf("fuck\n");
         assert(exp != nullptr);
         exp->process(ptr);
         stmtCode << tab << "return " << lastIdent << endl;
