@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <iostream>
 #include <map>
 #include <vector>
 using namespace std;
@@ -22,7 +23,7 @@ public:
     string id;
     int type;
     int val;
-    enum{Temp,Int,Array,VoidFunc,IntFunc};
+    enum{Temp,Int,Array,VoidFunc,IntFunc,Neither};
     bool initialized;
     int currentDim;
     vector<int> dimension;
@@ -40,8 +41,14 @@ public:
                 id="t"+ to_string(tempCnt++);
                 break;
             case Int:
+                id="T"+ to_string(permCnt++);
+//                cerr<<id;
+                break;
             case Array:
                 id="T"+ to_string(permCnt++);
+//                cerr<<id;
+                break;
+            default:
                 break;
         }
         initialized= false;
@@ -60,7 +67,9 @@ public:
         faSymTable=currentSymTable;
     }
     Symbol* addSymbol(string name,int type,bool isParam){
-        Symbol* symbol=new Symbol(type);
+//        cerr<<name<<' ';
+        Symbol* symbol=new Symbol(isParam?Symbol::Neither:type);
+//        cerr<<endl;
         if(isParam){
             symbol->id="p"+to_string(paramCnt++);
         }
