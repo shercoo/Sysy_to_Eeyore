@@ -384,8 +384,11 @@ int FuncFParam::process(void *ptr) {
         currentSymTable->addSymbol(ident, Symbol::Array, true);
         Symbol *symbol = currentSymTable->getSymbol(ident);
         symbol->dimension.push_back(0);
-        if (expList != nullptr)
+        if (expList != nullptr) {
+            calcOnly= true;
             expList->process(symbol);
+            calcOnly= false;
+        }
     }
     return 0;
 }
@@ -483,7 +486,6 @@ int Stmt::process(void *ptr) {
     } else if (type == Stmt::ReturnVoid) {
         *stmtCode << tab << "return" << endl;
     } else if (type == Stmt::ReturnVal) {
-//        printf("fuck\n");
         assert(exp != nullptr);
         exp->process(ptr);
         *stmtCode << tab << "return " << lastIdent << endl;
