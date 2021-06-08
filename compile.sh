@@ -7,12 +7,11 @@ echo $filepath
 #echo $filepath/"00_arr_defn2.sy"
 
 :<<!
-
+!
 for file in `ls -a $filepath`
 do
   if [ "${file##*.}"x = "sy"x ] ;then
     echo $file
-    ./test -S -e $filepath/$file -o test.S
+    ./test -S -e $filepath/$file -o result/$file.ee
   fi
 done
-!
