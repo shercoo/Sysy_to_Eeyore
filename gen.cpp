@@ -396,9 +396,11 @@ int FuncFParam::process(void *ptr) {
 
 int Block::process(void *ptr) {
 //    modOffset(1);
+    currentSymTable=new SymTable();
     if (blockItemList != nullptr)
         blockItemList->process(nullptr);
 //    modOffset(-1);
+    currentSymTable=currentSymTable->faSymTable;
     return 0;
 }
 
