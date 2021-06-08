@@ -7,6 +7,7 @@
 #include <string.h>
 #include <iostream>
 #include <sstream>
+#include <assert.h>
 
 using namespace std;
 
