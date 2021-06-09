@@ -233,7 +233,7 @@ int Exp::process(void *ptr) {
             *stmtCode << tab << l(falseLabel) << ":" << endl;
             falseLabel = f;
             exp2->process(ptr);
-            *stmtCode << tab << "if " << lastIdent << " != 0 goto " << l(trueLabel) << endl;
+            *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
         }
     } else {
         if (op.empty())
