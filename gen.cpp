@@ -282,13 +282,17 @@ int UnaryExp::process(void *ptr) {
 //            else
 //                assert(false);
         } else {
+            bool outer= false;
+            if(nonLval)
+                outer= true,nonLval= false;
             if (funcRParams != nullptr) {
-                rparams.clear();
-                funcRParams->process(ptr);
-                for (string p:rparams)
+                vector<string>* rp=new vector<string>;
+                rp->clear();
+                funcRParams->process(rp);
+                for (string p:*rp)
                     *stmtCode << tab << "param " << p << endl;
             }
-            if (nonLval)
+            if (outer)
                 *stmtCode << tab << "call f_" << ident << endl;
             else
                 appandNewTemp("call f_" + ident);
@@ -510,10 +514,11 @@ int Stmt::process(void *ptr) {
 }
 
 int FuncRParams::process(void *ptr) {
+    vector<string>* rp=((vector<string>*)ptr);
     if (funcRParams1 != nullptr)
         funcRParams1->process(ptr);
     exp->process(ptr);
     appandNewTemp(lastIdent);
-    rparams.push_back(lastIdent);
+    rp->push_back(lastIdent);
     return 0;
 }
