@@ -325,8 +325,15 @@ int Lval::process(void *ptr) {
             isLval = false;
         }
         expList->process(iSymbol);
+        bool partialArr = iSymbol->currentDim<(iSymbol->dimension.size()-1);
+        while(iSymbol->currentDim<iSymbol->dimension.size()-1){
+            appandNewTemp(lastIdent+" * "+ to_string(iSymbol->dimension[++(iSymbol->currentDim)]));
+        }
+//        cerr<<iSymbol->id<<' '<<iSymbol->currentDim<<' '<<iSymbol->dimension.size()<<endl;
         appandNewTemp(lastIdent + " * 4");
-        if (outer)
+        if(partialArr)
+            appandNewTemp(iSymbol->id+" + "+lastIdent);
+        else if (outer)
             lastIdent = iSymbol->id + " [ " + lastIdent + " ] ";
         else
             appandNewTemp(iSymbol->id + " [ " + lastIdent + " ] ");
