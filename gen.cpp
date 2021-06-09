@@ -23,6 +23,7 @@ stringstream *declCode;
 stringstream *stmtCode;
 bool calcOnly;
 bool inCond;
+bool judge;
 bool flag;//whether have && ||
 bool nonLval = false; //void func call
 bool isLval = false; //left exp
@@ -31,6 +32,7 @@ string lastIdent, tab;
 int labelCnt = 0, trueLabel, falseLabel, whileLabel, breakLabel;
 int Offset = 0;
 vector<string> rparams;
+#define FALL (-1)
 
 inline string l(int id) {
     return "l" + to_string(id);
@@ -215,26 +217,60 @@ int Exp::process(void *ptr) {
 //            else
 //                assert(false);
         }
-    } else if (inCond && (!op.empty() && (op == "&&" || op == "||"))) {
-        int t = trueLabel, f = falseLabel;
-        flag = false;
-        if (op == "&&") {
-            trueLabel = newLabel();
-            exp1->process(ptr);
-            *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
-            *stmtCode << tab << l(trueLabel) << ":" << endl;
-            trueLabel = t;
-            exp2->process(ptr);
-            *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
-        } else if (op == "||") {
-            falseLabel = newLabel();
-            exp1->process(ptr);
-            *stmtCode << tab << "if " << lastIdent << " != 0 goto " << l(trueLabel) << endl;
-            *stmtCode << tab << l(falseLabel) << ":" << endl;
-            falseLabel = f;
-            exp2->process(ptr);
-            *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
+    } else if (inCond) {
+        if (!op.empty()) {
+            int t = trueLabel, f = falseLabel,nt,nf;
+            if (op == "||") {
+                nt = trueLabel!=FALL?trueLabel:newLabel();
+                nf = FALL;
+                trueLabel=nt;
+                falseLabel=nf;
+                inCond= true;
+                exp1->process(ptr);
+                trueLabel=t;
+                falseLabel=f;
+                inCond= true;
+                exp2->process(ptr);
+                if(trueLabel==FALL)
+                    *stmtCode << tab << l(nt) << ":" << endl;
+            } else if (op == "&&") {
+                nt=FALL;
+                nf = falseLabel!=FALL?falseLabel:newLabel();
+                trueLabel=nt;
+                falseLabel=nf;
+                inCond= true;
+                exp1->process(ptr);
+                trueLabel=t;
+                falseLabel=f;
+                inCond= true;
+                exp2->process(ptr);
+                if(falseLabel==FALL)
+                    *stmtCode << tab << l(nf) << ":" << endl;
+            }
+            else{
+                inCond= false;
+                exp1->process(ptr);
+                string str1 = lastIdent;
+                exp2->process(ptr);
+                string str2 = lastIdent;
+                appandNewTemp(str1 + " " + op + " " + str2);
+
+                if(trueLabel!=FALL&& falseLabel!=FALL){
+                    *stmtCode <<tab<<"if "<<lastIdent<<" != 0 goto "<<l(trueLabel)<<endl;
+                    *stmtCode <<tab<<"goto "<<l(falseLabel)<<endl;
+                }
+                else if (trueLabel!=FALL){
+                    *stmtCode <<tab<<"if "<<lastIdent<<" != 0 goto "<<l(trueLabel)<<endl;
+                }
+                else if (falseLabel!=FALL){
+                    *stmtCode <<tab<<"if "<<lastIdent<<" == 0 goto "<<l(falseLabel)<<endl;
+                }
+                else
+                    assert(false);
+            }
         }
+        else
+            exp2->process(ptr);
     } else {
         if (op.empty())
             exp2->process(ptr);
@@ -265,19 +301,43 @@ int UnaryExp::process(void *ptr) {
 //            assert(false);
         }
     } else {
-        if (ident.empty()) {
-            if (inCond && unaryOp == "!") {
-                swap(trueLabel, falseLabel);
-                exp->process(ptr);
-                swap(trueLabel, falseLabel);
-                return 0;
+        if (ident.empty()) {//non-function
+            if (inCond ){
+                if(unaryOp=="!") {
+                    swap(trueLabel, falseLabel);
+                    inCond= true;
+                    exp->process(ptr);
+                    swap(trueLabel, falseLabel);
+                    return 0;
+                }
+                else{
+                    inCond= false;
+                    exp->process(ptr);
+                    if(unaryOp=="-")
+                        appandNewTemp(unaryOp + lastIdent);
+                    if(trueLabel!=FALL&& falseLabel!=FALL){
+                        *stmtCode <<tab<<"if "<<lastIdent<<" != 0 goto "<<l(trueLabel)<<endl;
+                        *stmtCode <<tab<<"goto "<<l(falseLabel)<<endl;
+                    }
+                    else if (trueLabel!=FALL){
+                        *stmtCode <<tab<<"if "<<lastIdent<<" != 0 goto "<<l(trueLabel)<<endl;
+                    }
+                    else if (falseLabel!=FALL){
+                        *stmtCode <<tab<<"if "<<lastIdent<<" == 0 goto "<<l(falseLabel)<<endl;
+                    }
+                    else
+                        assert(false);
+                }
+
             }
-            exp->process(ptr);
-            if (unaryOp.empty()) return 0;
-            else if (unaryOp == "+")return 0;
-            else if (unaryOp == "-" || unaryOp == "!") {
-                appandNewTemp(unaryOp + lastIdent);
-                return 0;
+            else {
+                exp->process(ptr);
+                if (unaryOp.empty()) return 0;
+                else if (unaryOp == "+")return 0;
+                else if (unaryOp == "-" || unaryOp == "!") {
+                    appandNewTemp(unaryOp + lastIdent);
+                    return 0;
+                }
             }
 //            else
 //                assert(false);
@@ -427,13 +487,12 @@ int BlockItemList::process(void *ptr) {
 
 void condProcess(Node *cond) {
     inCond = true;
-    flag = true;
     cond->process(nullptr);
     inCond = false;
-    if (flag) {
-        *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
-        flag = false;
-    }
+//    if (flag) {
+//        *stmtCode << tab << "if " << lastIdent << " == 0 goto " << l(falseLabel) << endl;
+//        flag = false;
+//    }
 }
 
 int Stmt::process(void *ptr) {
@@ -455,21 +514,20 @@ int Stmt::process(void *ptr) {
     } else if (block != nullptr) {
         block->process(nullptr);
     } else if (type == Stmt::If) {
-        trueLabel = newLabel();
+        trueLabel = FALL;
         falseLabel = newLabel();
         condProcess(cond);
-        *stmtCode << tab << l(trueLabel) << ":" << endl;
+//        *stmtCode << tab << l(trueLabel) << ":" << endl;
         modOffset(1);
         stmt1->process(ptr);
         modOffset(-1);
         *stmtCode << tab << l(falseLabel) << ":" << endl;
     } else if (type == Stmt::IfElse) {
-        trueLabel = newLabel();
+        trueLabel = FALL;
         falseLabel = newLabel();
         int endLabel = newLabel();
         condProcess(cond);
-
-        *stmtCode << tab << l(trueLabel) << ":" << endl;
+//        *stmtCode << tab << l(trueLabel) << ":" << endl;
         modOffset(1);
         stmt1->process(ptr);
         modOffset(-1);
@@ -482,14 +540,14 @@ int Stmt::process(void *ptr) {
         *stmtCode << tab << l(endLabel) << ":" << endl;
     } else if (type == Stmt::While) {
         whileLabel = newLabel();
-        trueLabel = newLabel();
+        trueLabel = FALL;
         falseLabel = newLabel();
         breakLabel = falseLabel;
         *stmtCode << tab << l(whileLabel) << ":" << endl;
         condProcess(cond);
 
         modOffset(1);
-        *stmtCode << tab << l(trueLabel) << ":" << endl;
+//        *stmtCode << tab << l(trueLabel) << ":" << endl;
         stmt1->process(ptr);
         *stmtCode << tab << "goto " << l(whileLabel) << endl;
         modOffset(-1);
