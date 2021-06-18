@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <vector>
@@ -27,12 +28,21 @@ public:
     bool initialized;
     int currentDim;
     vector<int> dimension;
-    vector<int> arrayVal;
+    int* arrayVal;
     int getSize(int st){
         int res=1;
         for(int i=st;i<dimension.size();i++)
             res*=dimension[i];
         return res;
+    }
+    void setVal(int pos,int v){
+        if(type==Int)
+            val=v;
+        else if(type==Array){
+            if(arrayVal== nullptr)
+                arrayVal=new int[getSize(0)];
+            arrayVal[pos]=v;
+        }
     }
     explicit Symbol(int tp){
         type=tp;
@@ -53,6 +63,7 @@ public:
         }
         initialized= false;
         dimension.clear();
+        arrayVal= nullptr;
     }
 };
 int Symbol::tempCnt=0,Symbol::permCnt=0;

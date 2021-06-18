@@ -23,7 +23,7 @@ stringstream *declCode;
 stringstream *stmtCode;
 bool calcOnly;
 bool inCond;
-bool judge;
+bool initializing= false;
 bool flag;//whether have && ||
 bool nonLval = false; //void func call
 bool isLval = false; //left exp
@@ -160,13 +160,21 @@ int InitVal::process(void *ptr) {
     if (symbol->type == Symbol::Int) {
 //        if (exp == nullptr || initValList != nullptr)
 //            assert(false);
-        exp->process(nullptr);
-        *stmtCode << tab << symbol->id << " = " << lastIdent << endl;
+        calcOnly= true;
+        int res=exp->process(nullptr);
+        calcOnly= false;
+
+        symbol->setVal(0,res);
+        *stmtCode << tab << symbol->id << " = " << res << endl;
 //        printf("%s=%d\n",symbol->id.c_str(),res);
     } else {
         if (exp != nullptr) {
-            exp->process(nullptr);
-            *stmtCode << tab << symbol->id << " [ " << info->offset * 4 << " ] = " << lastIdent << endl;
+            calcOnly= true;
+            int res=exp->process(nullptr);
+            calcOnly= false;
+
+            symbol->setVal(info->offset,res);
+            *stmtCode << tab << symbol->id << " [ " << info->offset * 4 << " ] = " << res << endl;
 //            printf("%s[%d]=%s\n",symbol->id.c_str(),info->offset*4,lastIdent.c_str());
             info->offset++;
         } else {
@@ -342,6 +350,8 @@ int UnaryExp::process(void *ptr) {
 //            else
 //                assert(false);
         } else {
+            if(ident=="starttime"||ident=="stoptime")
+                return 0;
             bool outer= false;
             if(nonLval)
                 outer= true,nonLval= false;
@@ -373,15 +383,17 @@ int PrimaryExp::process(void *ptr) {
             lastIdent = to_string(number);
 //            cout<<"fuck"<<lastIdent<<endl;
 //            appandNewTemp(to_string(number));
-            return 0;
+            return number;
         }
     }
 }
 
 int Lval::process(void *ptr) {
     Symbol *iSymbol = currentSymTable->getSymbol(ident);
-    if (expList == nullptr)
+    if (expList == nullptr) {
         lastIdent = iSymbol->id;
+        return iSymbol->val;
+    }
     else {
         bool outer = false;
         if (isLval) {
